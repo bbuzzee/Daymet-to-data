@@ -8,25 +8,45 @@ library(shiny)
 
 # ------------------------- User Interface Code -----------------------------
 
+# Goal: User inputs a date range and uploads a csv with one column for site id,
+# and either one column for zipcode, or two columns for lat/long
+# Then a user can click a download button to retrieve a csv with weather data
 
 ui <- fluidPage(
    
    # Application title
-   titlePanel("Old Faithful Geyser Data"),
+   titlePanel("Collect Daymet Data"),
    
-   # Sidebar with a slider input for number of bins 
    sidebarLayout(
       sidebarPanel(
-         sliderInput("bins",
-                     "Number of bins:",
-                     min = 1,
-                     max = 50,
-                     value = 30)
+        
+        dateRangeInput("dates", label = h5(strong("Enter a Date range"))
+        ),
+        
+        
+        
+        selectInput("id", label = h5(strong("How are locations identified?")), 
+                    choices = list("Latitude/Longitude" = 1, "Zip-code" = 2), 
+                    selected = 1),
+        
+        checkboxInput('header', 'Column Headers', TRUE),
+        
+        fileInput('file', 'Choose file to upload',
+                  accept = c(
+                    'text/csv',
+                    'text/comma-separated-values',
+                    'text/tab-separated-values',
+                    'text/plain',
+                    '.csv',
+                    '.tsv'
+                  )
+        )
+        
       ),
       
       # Show a plot of the generated distribution
       mainPanel(
-         plotOutput("distPlot")
+         tableOutput("collectedinfo")
       )
    )
 )
@@ -36,18 +56,28 @@ ui <- fluidPage(
 # --------------------- Server Code ------------------------------
 
 
-# Define server logic required to draw a histogram
-server <- function(input, output) {
-   
-   output$distPlot <- renderPlot({
-      # generate bins based on input$bins from ui.R
-      x    <- faithful[, 2] 
-      bins <- seq(min(x), max(x), length.out = input$bins + 1)
+server <- function(input, output){
+    output$contents <- renderTable({
+      # input$file1 will be NULL initially. After the user selects
+      # and uploads a file, it will be a data frame with 'name',
+      # 'size', 'type', and 'datapath' columns. The 'datapath'
+      # column will contain the local filenames where the data can
+      # be found.
       
-      # draw the histogram with the specified number of bins
-      hist(x, breaks = bins, col = 'darkgray', border = 'white')
-   })
+      inFile <- input$file1
+      
+      if (is.null(inFile))
+        return(NULL)
+      
+      read.csv(inFile$datapath, header = input$header,
+               sep = input$sep, quote = input$quote)
+    })
+    
+    output$collectedinfo <- renderTable({data.frame(input$header, input$id, input$dates)})
+  
+   
 }
+
 
 # Run the application 
 shinyApp(ui = ui, server = server)
