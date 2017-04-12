@@ -1,10 +1,49 @@
 #
 #
-#
-#
-#
 
+rm(list=ls())
 library(shiny)
+library(tidyverse)
+library(zipcode)
+library(devtools)
+library(daymetr) # install_github("khufkens/daymetr")
+data(zipcode)
+
+
+# changed the download function to take a dataframe instead of a csv.
+# change is on github, need to figure out how to load modified package with library
+
+batch.download.daymet <- function(df,
+                                  start_yr=1980,
+                                  end_yr=as.numeric(format(Sys.time(), "%Y"))-1,
+                                  internal="assign"){
+  
+  # loop over all lines in the file
+  for (i in 1:nrow(df)){
+    site = as.character(df[i,1])
+    lat = as.numeric(df[i,2])
+    lon = as.numeric(df[i,3])
+    try(download.daymet(site=site,lat=lat,lon=lon,start_yr=start_yr,end_yr=end_yr,internal=internal),silent=FALSE)
+  }
+}
+
+
+
+# sites <- read.csv(file= "test.csv", colClasses = "character") %>% as_data_frame() %>% mutate(zip = as.character(zip))
+# 
+# daymetrfood <- left_join(sites, zipcode, by = "zip") %>% select(location, latitude, longitude) %>% 
+#                 mutate(location = paste0("x",location))
+# 
+# 
+# batch.download.daymet(df=daymetrfood,start_yr=2009,end_yr=2010,internal=TRUE)
+# 
+# dat <- data.frame()
+# for (i in daymetrfood[,1])
+#   dat <- do.call(rbind, get(i))
+
+
+
+
 
 # ------------------------- User Interface Code -----------------------------
 
@@ -46,7 +85,7 @@ ui <- fluidPage(
       
       # Show a plot of the generated distribution
       mainPanel(
-         tableOutput("collectedinfo")
+        downloadLink("downloadData", "Download")
       )
    )
 )
@@ -54,29 +93,61 @@ ui <- fluidPage(
 
 
 # --------------------- Server Code ------------------------------
-
+# need to modify to input latitude and longitude
 
 server <- function(input, output){
-    output$contents <- renderTable({
-      # input$file1 will be NULL initially. After the user selects
+  
+  
+    data <- reactive({
+      # input$file will be NULL initially. After the user selects
       # and uploads a file, it will be a data frame with 'name',
       # 'size', 'type', and 'datapath' columns. The 'datapath'
       # column will contain the local filenames where the data can
       # be found.
       
-      inFile <- input$file1
+      inFile <- input$file
       
       if (is.null(inFile))
         return(NULL)
       
-      read.csv(inFile$datapath, header = input$header,
-               sep = input$sep, quote = input$quote)
+       sites <- read.csv(inFile$datapath, header = input$header, colClasses = "character")
+       
+       daymetrfood <- left_join(sites, zipcode, by = "zip") %>% select(get(names(sites)[1]),
+                                                                       latitude,
+                                                                       longitude)
+
+       batch.download.daymet(df=daymetrfood, start_yr = 2009, end_yr = 2010)
+
+       dat.ls <- NULL
+       
+       for (i in 1:nrow(daymetrfood))
+         
+         dat.ls[[i]] <-  get(daymetrfood[i,1])$data %>%
+         mutate(site = as.character(daymetrfood[i,1]))
+         #mutate(site = strsplit(as.character(daymetrfood[1,1]), split = "")[[1]][2])
+
+       dat <- data.frame()
+       dat <- do.call(rbind,dat.ls)
+       return(dat)
     })
     
-    output$collectedinfo <- renderTable({data.frame(input$header, input$id, input$dates)})
-  
-   
+      
+
+    output$downloadData <- downloadHandler(
+      
+      filename = function() { 
+        paste("data-", Sys.Date(), ".csv", sep="")
+      },
+      
+      content = function(file) {
+        
+        write.csv(data(), file)
+        
+      })
 }
+    
+   
+
 
 
 # Run the application 
