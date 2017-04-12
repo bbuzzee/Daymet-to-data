@@ -29,22 +29,6 @@ batch.download.daymet <- function(df,
 
 
 
-# sites <- read.csv(file= "test.csv", colClasses = "character") %>% as_data_frame() %>% mutate(zip = as.character(zip))
-# 
-# daymetrfood <- left_join(sites, zipcode, by = "zip") %>% select(location, latitude, longitude) %>% 
-#                 mutate(location = paste0("x",location))
-# 
-# 
-# batch.download.daymet(df=daymetrfood,start_yr=2009,end_yr=2010,internal=TRUE)
-# 
-# dat <- data.frame()
-# for (i in daymetrfood[,1])
-#   dat <- do.call(rbind, get(i))
-
-
-
-
-
 # ------------------------- User Interface Code -----------------------------
 
 # Goal: User inputs a date range and uploads a csv with one column for site id,
@@ -83,7 +67,7 @@ ui <- fluidPage(
         
       ),
       
-      # Show a plot of the generated distribution
+
       mainPanel(
         downloadLink("downloadData", "Download")
       )
@@ -118,13 +102,15 @@ server <- function(input, output){
 
        batch.download.daymet(df=daymetrfood, start_yr = 2009, end_yr = 2010)
 
+       
+       # possibly simplify the following loop?
+       
        dat.ls <- NULL
        
        for (i in 1:nrow(daymetrfood))
          
          dat.ls[[i]] <-  get(daymetrfood[i,1])$data %>%
          mutate(site = as.character(daymetrfood[i,1]))
-         #mutate(site = strsplit(as.character(daymetrfood[1,1]), split = "")[[1]][2])
 
        dat <- data.frame()
        dat <- do.call(rbind,dat.ls)
