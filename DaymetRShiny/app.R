@@ -7,6 +7,8 @@ library(tidyverse)
 library(zipcode)
 library(devtools)
 library(daymetr) # install_github("khufkens/daymetr")
+library(shinythemes)
+library
 data(zipcode)
 
 
@@ -36,23 +38,25 @@ batch.download.daymet <- function(df,
 # Then a user can click a download button to retrieve a csv with weather data
 
 ui <- fluidPage(
-   
+   theme =  shinytheme("spacelab"),
    # Application title
-   titlePanel("Collect Daymet Data"),
+   titlePanel(img(src = "daymet_web_banner_NA.jpg")),
    
    sidebarLayout(
       sidebarPanel(
         
-        dateRangeInput("dates", label = h5(strong("Enter a Date range"))
+        dateRangeInput("dates", label = h5(strong("Enter a Date Range"))
         ),
         
         
         
         selectInput("id", label = h5(strong("How are locations identified?")), 
-                    choices = list("Latitude/Longitude" = 1, "Zip-code" = 2), 
+                    choices = list("Latitude/Longitude" = 1, "Zip Code" = 2), 
                     selected = 1),
         
         checkboxInput('header', 'Column Headers', TRUE),
+        
+        imageOutput("image"),
         
         fileInput('file', 'Choose file to upload',
                   accept = c(
@@ -69,7 +73,7 @@ ui <- fluidPage(
       
 
       mainPanel(
-        downloadLink("downloadData", "Download")
+        downloadButton("downloadData", "Download")
       )
    )
 )
@@ -126,10 +130,20 @@ server <- function(input, output){
       },
       
       content = function(file) {
-        
         write.csv(data(), file)
-        
       })
+    
+    output$image <- renderImage({
+      if(input$header)
+        return(list(src = "www/header_format.png",
+                    filetype = "image/png",
+                    alt = "string"))
+      else
+        return(list(src = "www/noheader_format.png",
+                    filetype = "image/png",
+                    alt = "string"))
+    },
+    deleteFile = F)
 }
     
    
