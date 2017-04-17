@@ -1,5 +1,7 @@
 #
 #
+#
+
 
 rm(list=ls())
 library(shiny)
@@ -8,7 +10,6 @@ library(zipcode)
 library(devtools)
 library(daymetr) # install_github("khufkens/daymetr")
 library(shinythemes)
-library
 data(zipcode)
 
 
@@ -38,42 +39,45 @@ batch.download.daymet <- function(df,
 # Then a user can click a download button to retrieve a csv with weather data
 
 ui <- fluidPage(
+  
    theme =  shinytheme("spacelab"),
-   # Application title
+
    titlePanel(img(src = "daymet_web_banner_NA.jpg")),
    
    sidebarLayout(
+     
       sidebarPanel(
         
-        dateRangeInput("dates", label = h5(strong("Enter a Date Range"))
+        dateRangeInput("dates", label = h5(strong("Enter a Date Range")),
+                       start = "2011-01-01", end = "2012-01-01"
         ),
         
-        
-        
         selectInput("id", label = h5(strong("How are locations identified?")), 
-                    choices = list("Latitude/Longitude" = 1, "Zip Code" = 2), 
-                    selected = 1),
+                    choices = list("Zip Code" = 1, "Latitude/Longitude" = 2), 
+                    selected = 1
+        ),
         
-        checkboxInput('header', 'Column Headers', TRUE),
+        checkboxInput('header', 'Column Headers', TRUE
+        ),
         
-        imageOutput("image"),
+        helpText("Required upload format:"
+        ),
         
-        fileInput('file', 'Choose file to upload',
+        imageOutput("image", width = 100, height = 125
+        ),
+        
+        fileInput('file1', 'Choose file to upload',
                   accept = c(
                     'text/csv',
                     'text/comma-separated-values',
-                    'text/tab-separated-values',
-                    'text/plain',
-                    '.csv',
-                    '.tsv'
+                    '.csv'
                   )
         )
         
       ),
       
-
       mainPanel(
-        downloadButton("downloadData", "Download")
+        downloadButton("downloadData", "Download Daymet Data")
       )
    )
 )
@@ -93,18 +97,26 @@ server <- function(input, output){
       # column will contain the local filenames where the data can
       # be found.
       
-      inFile <- input$file
+      inFile <- input$file1
       
-      if (is.null(inFile))
+      if (is.null(inFile)){
         return(NULL)
+      }
       
        sites <- read.csv(inFile$datapath, header = input$header, colClasses = "character")
        
-       daymetrfood <- left_join(sites, zipcode, by = "zip") %>% select(get(names(sites)[1]),
-                                                                       latitude,
-                                                                       longitude)
-
-       batch.download.daymet(df=daymetrfood, start_yr = 2009, end_yr = 2010)
+       if (input$id == 1) {
+         
+       daymetrfood <- left_join(sites, zipcode, by = "zip") %>%
+                      select(get(names(sites)[1]), latitude, longitude)
+       }
+       
+       else { 
+         daymetrfood <- sites
+       }
+       
+       batch.download.daymet(df=daymetrfood, start_yr = as.numeric(format(as.Date(input$dates[1]), "%Y")),
+                             end_yr = as.numeric(format(input$dates[2], "%Y")))
 
        
        # possibly simplify the following loop?
@@ -126,20 +138,30 @@ server <- function(input, output){
     output$downloadData <- downloadHandler(
       
       filename = function() { 
-        paste("data-", Sys.Date(), ".csv", sep="")
+        paste0(Sys.Date(),"-daymet-data", ".csv", sep="")
       },
       
       content = function(file) {
         write.csv(data(), file)
       })
+
+    
     
     output$image <- renderImage({
-      if(input$header)
-        return(list(src = "www/header_format.png",
+      if(input$header & input$id == 1)
+        return(list(src = "www/header_zip.png",
                     filetype = "image/png",
                     alt = "string"))
-      else
-        return(list(src = "www/noheader_format.png",
+      else if (!input$header & input$id == 1)
+        return(list(src = "www/noheader_zip.png",
+                    filetype = "image/png",
+                    alt = "string"))
+      else if (input$header & input$id == 2)
+        return(list(src = "www/header_lat.png",
+                    filetype = "image/png",
+                    alt = "string"))
+      else (!input$header & input$id == 2)
+        return(list(src = "www/noheader_lat.png",
                     filetype = "image/png",
                     alt = "string"))
     },
