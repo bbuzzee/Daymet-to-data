@@ -67,7 +67,7 @@ ui <- fluidPage(
           imageOutput("image", width = 100, height = 125
           ),
           
-          fileInput('file1', 'Choose file to upload',
+          fileInput('file1', 'Choose a file to upload',
                     accept = c(
                       'text/csv',
                       'text/comma-separated-values',
@@ -82,12 +82,19 @@ ui <- fluidPage(
       mainPanel(
         column(3, uiOutput("selectyr")),
         column(3, uiOutput("selectsite")),
-        column(3, uiOutput("selectmetric")),
+        column(3, selectInput("metric", label = "Metrics",
+                              choices =  c("cumul_gdd", "prcp_mm", "srad_wm2",
+                                           "swe_kgm2", "tmax_c", "tmin_c", "vpr_pa")
+                  )
+        ),
+        br(),
         br(),
         br(),
         br(),
         plotlyOutput("plot"),
-        downloadButton("downloadData", "Download Daymet Data")
+        column(3, "" ),
+        column(3, "" ),
+        column(3,downloadButton("downloadData", "Download Daymet Data"))
       )
    )
 )
@@ -109,51 +116,61 @@ server <- function(input, output){
       # column will contain the local filenames where the data can
       # be found.
       
-      inFile <- input$file1
+     inFile <- input$file1
       
-      if (is.null(inFile)){
-        return(NULL)
-      }
-      
-       sites <- read.csv(inFile$datapath, header = input$header, colClasses = "character")
+     if (is.null(inFile)){
+      return(NULL)
+     }
+    
+     sites <- read.csv(inFile$datapath, header = input$header, colClasses = "character")
+
+
+     if (ncol(sites) == 2){
        
-       if (input$id == 1) {
-         
-       daymetrfood <- left_join(sites, zipcode, by = "zip") %>%
-                      select(get(names(sites)[1]), latitude, longitude)
+       if(!input$header){
+         names(sites) <- c("location", "zip")
        }
        
-       else { 
-         daymetrfood <- sites
+     daymetrfood <- left_join(sites, zipcode, by = "zip") %>%
+                    select(get(names(sites)[1]), latitude, longitude)
+     }
+     
+     else {
+       
+       if(!input$header){
+         names(sites) <- c("location", "zip")
        }
        
-       batch.download.daymet(df=daymetrfood, start_yr = as.numeric(format(as.Date(input$dates[1]), "%Y")),
-                             end_yr = as.numeric(format(input$dates[2], "%Y")))
+       daymetrfood <- sites
+     }
+     
+     batch.download.daymet(df=daymetrfood, start_yr = as.numeric(format(as.Date(input$dates[1]), "%Y")),
+                           end_yr = as.numeric(format(input$dates[2], "%Y")))
 
+     
+     # possibly simplify the following loop?
+     
+     dat.ls <- NULL
+     
+     for (i in 1:nrow(daymetrfood))
        
-       # possibly simplify the following loop?
-       
-       dat.ls <- NULL
-       
-       for (i in 1:nrow(daymetrfood))
-         
-         dat.ls[[i]] <-  get(daymetrfood[i,1])$data %>%
-         mutate(site = as.character(daymetrfood[i,1]))
+       dat.ls[[i]] <-  get(daymetrfood[i,1])$data %>%
+       mutate(site = as.character(daymetrfood[i,1]))
 
-       dat <- data.frame()
-       dat <- do.call(rbind,dat.ls)
-       
-       names(dat) <- c("year", "yday","dayls", "prcp_mm", "srad_wm2", "swe_kgm2",
-                       "tmax_c", "tmin_c", "vpr_pa", "site")
-       
-       # create cumulative growing degree day calculations for each site and for each
-       # year
-       
-       dat <-  dat %>% group_by(year, site) %>% 
-               mutate(gdd_day = ifelse((tmax_c+tmin_c)/2 > 10,(tmax_c + tmin_c)/2 - 10, 0)) %>% 
-               mutate(cumul_gdd = cumsum(gdd_day))
-       
-       return(dat)
+     dat <- data.frame()
+     dat <- do.call(rbind,dat.ls)
+     
+     names(dat) <- c("year", "yday","dayls", "prcp_mm", "srad_wm2", "swe_kgm2",
+                     "tmax_c", "tmin_c", "vpr_pa", "site")
+     
+     # create cumulative growing degree day calculations for each site and for each
+     # year
+     
+     dat <-  dat %>% group_by(year, site) %>% 
+             mutate(gdd_day = ifelse((tmax_c+tmin_c)/2 > 10,(tmax_c + tmin_c)/2 - 10, 0)) %>% 
+             mutate(cumul_gdd = cumsum(gdd_day))
+     
+     return(dat)
     })
     
     # prompt user for year to graph
@@ -161,7 +178,7 @@ server <- function(input, output){
     output$selectyr <- renderUI({
       dat <- data()
       dat <- unique(dat$year)
-      selectInput(inputId = "yr",label = "Choose a year to graph", dat)
+      selectInput(inputId = "yr",label = "Choose a year", dat)
     })
     
     # prompt user for site
@@ -172,14 +189,9 @@ server <- function(input, output){
       selectInput(inputId = "loc",label = "Choose a site", dat)
     })
     
-    output$selectmetric <- renderUI({
-      dat <- data()
-      dat <- c("cumul_gdd", "prcp_mm", "srad_wm2", "swe_kgm2",
-               "tmax_c", "tmin_c", "vpr_pa")
-      selectInput(inputId = "metric", label = "Choose a metric", dat)
-    })
+    # get desired metric to graph
 
-    # filter and plot the data
+    # --------------- Plot ---------------
     
     output$plot <- renderPlotly({
       
@@ -187,13 +199,14 @@ server <- function(input, output){
         return(NULL)
       }       
 
-      # m <- list(l = 50,r = 50, b = 100, t = 100,pad = 4)
+      m <- list(l = 70,r = 70, b = 100, t = 25,pad = 1)
       yaxis <- list(title = input$metric)
       dat <- data()
-      met <- input$metric
       dat %>% filter(year == input$yr, site == input$loc) %>%
               plot_ly(x = ~yday, y = ~get(input$metric)) %>% 
-              layout(yaxis = yaxis)
+              config(displayModeBar = FALSE) %>% 
+              layout(yaxis = yaxis, autosize = T, margin = m)
+              
       
     })
     
