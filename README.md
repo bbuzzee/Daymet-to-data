@@ -10,7 +10,7 @@ This App provides easy access to the data produced by Daymet. It features an eas
 
 ## Inputs
 
-Users will need to upload a file containing a column for site id and either a column for zipcode or separate columns for latitude and longitude, e.g.,
+Users will need to upload a file containing a column for site id and either a column for zipcode or separate columns for latitude and longitude, for example,
 
 
 ![alt text](./DaymetRShiny/www/header_zip.PNG "Description goes here")
