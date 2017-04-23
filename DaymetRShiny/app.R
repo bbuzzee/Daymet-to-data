@@ -178,7 +178,7 @@ server <- function(input, output){
     
     output$selectyr <- renderUI({
       dat <- data()
-      dat <- unique(dat$year)
+      dat <- unique(dat$year) # get rid of these lines, replace argument below
       selectInput(inputId = "yr",label = "Choose a year", dat)
     })
     
