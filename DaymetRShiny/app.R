@@ -1,13 +1,7 @@
-#
-#
-#
 
-
-rm(list=ls())
 library(shiny)
 library(tidyverse)
 library(zipcode)
-library(devtools)
 library(daymetr) # install_github("khufkens/daymetr")
 library(shinythemes)
 library(plotly)
@@ -91,7 +85,7 @@ ui <- fluidPage(
         br(),
         br(),
         plotlyOutput("plot"),
-        column(3, "" ),
+        column(4, helpText("Learn more at the", a("Daymet Homepage", href = "https://daymet.ornl.gov/overview.html"))),
         column(3, "" ),
         column(3,downloadButton("downloadData", "Download Daymet Data"))
       )
@@ -102,13 +96,15 @@ ui <- fluidPage(
 
 
 # --------------------- Server Code ------------------------------
-# need to modify to input latitude and longitude
+
 
 server <- function(input, output){
 
     # read in and modify the data from daymetr
+    # returns a single datafame containing all daymet data
   
     data <- reactive({
+      
       # input$file will be NULL initially. After the user selects
       # and uploads a file, it will be a data frame with 'name',
       # 'size', 'type', and 'datapath' columns. The 'datapath'
@@ -123,41 +119,46 @@ server <- function(input, output){
     
      sites <- read.csv(inFile$datapath, header = input$header, colClasses = "character")
 
-
+     # uploads using zip identifiers will only have two columns
+     
      if (ncol(sites) == 2){
        
-       if(!input$header){
+      if(!input$header){
          names(sites) <- c("location", "zip")
        }
        
-     daymetrfood <- left_join(sites, zipcode, by = "zip") %>%
+      daymetrfood <- left_join(sites, zipcode, by = "zip") %>%
                     select(get(names(sites)[1]), latitude, longitude)
      }
      
      else {
        
-       if(!input$header){
+      if(!input$header){
          names(sites) <- c("location", "zip")
        }
        
-       daymetrfood <- sites
+      daymetrfood <- sites
      }
+     
+     # DaymetR function to download data
      
      batch.download.daymet(df=daymetrfood, start_yr = as.numeric(format(as.Date(input$dates[1]), "%Y")),
                            end_yr = as.numeric(format(input$dates[2], "%Y")))
 
      
-     # possibly simplify the following loop?
+     # compile data from download into one file
+     # possibly simplify?
      
      dat.ls <- NULL
      
-     for (i in 1:nrow(daymetrfood))
+     for (i in 1:nrow(daymetrfood)){
        
        dat.ls[[i]] <-  get(daymetrfood[i,1])$data %>%
        mutate(site = as.character(daymetrfood[i,1]))
-
+     }
+     
      dat <- data.frame()
-     dat <- do.call(rbind,dat.ls)
+     dat <- do.call(rbind, dat.ls)
      
      names(dat) <- c("year", "yday","dayls", "prcp_mm", "srad_wm2", "swe_kgm2",
                      "tmax_c", "tmin_c", "vpr_pa", "site")
@@ -187,10 +188,9 @@ server <- function(input, output){
       dat <- unique(dat$site)
       selectInput(inputId = "loc",label = "Choose a site", dat)
     })
-    
-    # get desired metric to graph
 
-    # --------------- Plot ---------------
+
+    # --------------- Create Plot ---------------
     
     output$plot <- renderPlotly({
       
@@ -200,8 +200,8 @@ server <- function(input, output){
 
       m <- list(l = 70,r = 70, b = 100, t = 25,pad = 1)
       yaxis <- list(title = input$metric)
-      dat <- data()
-      dat %>% filter(year == input$yr, site == input$loc) %>%
+      
+      data() %>% filter(year == input$yr, site == input$loc) %>%
               plot_ly(x = ~yday, y = ~get(input$metric)) %>% 
               config(displayModeBar = FALSE) %>% 
               layout(yaxis = yaxis, autosize = T, margin = m)
@@ -209,8 +209,6 @@ server <- function(input, output){
       
     })
     
-    
-    # create download button 
     
     output$downloadData <- downloadHandler(
       
@@ -223,25 +221,27 @@ server <- function(input, output){
       })
 
     
-    # render appropriate format image based on input
+    # render appropriate format image based on input, four possibilities
     
     output$image <- renderImage({
       if(input$header & input$id == 1)
-        return(list(src = "www/header_zip.png",
+        return(list(src = "www/header_zip.PNG", # changed this!
                     filetype = "image/png",
                     alt = "string"))
       else if (!input$header & input$id == 1)
-        return(list(src = "www/noheader_zip.png",
+        return(list(src = "www/noheader_zip.PNG",
                     filetype = "image/png",
                     alt = "string"))
       else if (input$header & input$id == 2)
-        return(list(src = "www/header_lat.png",
+        return(list(src = "www/header_lat.PNG",
                     filetype = "image/png",
-                    alt = "string"))
+                    alt = "string",
+                    width = 200))
       else (!input$header & input$id == 2)
-        return(list(src = "www/noheader_lat.png",
+        return(list(src = "www/noheader_lat.PNG",
                     filetype = "image/png",
-                    alt = "string"))
+                    alt = "string",
+                    width = 200))
     },
     deleteFile = F)
 }
