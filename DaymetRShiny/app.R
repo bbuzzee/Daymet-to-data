@@ -85,7 +85,8 @@ ui <- fluidPage(
         br(),
         br(),
         plotlyOutput("plot"),
-        column(4, helpText("Learn more at the", a("Daymet Homepage", href = "https://daymet.ornl.gov/overview.html"))),
+        column(4, helpText("Learn more at the", a("Daymet Homepage", href = "https://daymet.ornl.gov/overview.html",
+                                                  target = "_blank"))),
         column(3, "" ),
         column(3,downloadButton("downloadData", "Download Daymet Data"))
       )
