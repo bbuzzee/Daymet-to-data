@@ -15,8 +15,10 @@ Users will need to upload a file containing a column for location id (string or 
 
 ![alt text](./DaymetRShiny/www/header_zip.PNG "Description goes here")
 
-## Outputs
+## Output
 
+Embedded is an interactive plotly plot and available for download is a csv of the following format:
 
+![alt text](./DaymetRShiny/www/output.PNG "Description goes here")
   
 
