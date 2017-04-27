@@ -15,8 +15,10 @@ Users will need to upload a file containing a column for location id (string or 
 
 ![alt text](./DaymetRShiny/www/header_zip.PNG "Description goes here")
 
-## Outputs
+## Output
 
+Embedded is an interactive plot for basic exploration and a csv file of the following format is available to download.
 
+![alt text](./DaymetRShiny/www/output.PNG "Description goes here")
   
 
