@@ -77,7 +77,7 @@ ui <- fluidPage(
         column(3, uiOutput("selectyr")),
         column(3, uiOutput("selectsite")),
         column(3, selectInput("metric", label = "Metrics",
-                              choices =  c("gdd_cumul", "prcp_mm", "srad_wm2",
+                              choices =  c("gdd_cumul", "prcp_mm", "dayl_s", "srad_wm2",
                                            "swe_kgm2", "tmax_c", "tmin_c", "vpr_pa")
                   )
         ),
@@ -101,7 +101,8 @@ ui <- fluidPage(
 
 server <- function(input, output){
 
-    # read in and modify the data from daymetr
+    # DaymetR requires site, lat, long format, so if a user uploads zip identifiers
+    # it needs to be joined with zipcode database and reduced to site, lat, long via select
     # returns a single datafame containing all daymet data
   
     data <- reactive({
@@ -119,26 +120,19 @@ server <- function(input, output){
      }
     
      sites <- read.csv(inFile$datapath, header = input$header, colClasses = "character")
-
-     # uploads using zip identifiers will only have two columns
      
+     # any time a two column file is uploaded, rename cols and join with zipcode database
      if (ncol(sites) == 2){
        
-      if(!input$header){
-         names(sites) <- c("location", "zip")
-       }
+      names(sites) <- c("location", "zip")
        
       daymetrfood <- left_join(sites, zipcode, by = "zip") %>%
                     select(get(names(sites)[1]), latitude, longitude)
      }
      
-     else {
-       
-      if(!input$header){
-         names(sites) <- c("location", "zip")
-       }
-       
-      daymetrfood <- sites
+     # if lat/long are uploaded, the file can be fed straight to daymetR
+     else{
+       daymetrfood <- sites
      }
      
      # DaymetR function to download data
@@ -161,7 +155,7 @@ server <- function(input, output){
      dat <- data.frame()
      dat <- do.call(rbind, dat.ls)
      
-     names(dat) <- c("year", "yday","dayls", "prcp_mm", "srad_wm2", "swe_kgm2",
+     names(dat) <- c("year", "yday","dayl_s", "prcp_mm", "srad_wm2", "swe_kgm2",
                      "tmax_c", "tmin_c", "vpr_pa", "site")
      
      # create cumulative growing degree day calculations for each site and for each
