@@ -42,42 +42,45 @@ ui <- fluidPage(
    sidebarLayout(
      
       sidebarPanel(
-                 
-          dateRangeInput("dates", label = h5(strong("Enter a Date Range")),
-                         start = "2011-01-01", end = "2012-01-01"
-          ),
-          
-          selectInput("id", label = h5(strong("How are locations identified?")), 
-                      choices = list("Zip Code" = 1, "Latitude/Longitude" = 2), 
-                      selected = 1
-          ),
-          
-          checkboxInput('header', 'Column Headers', TRUE
-          ),
-          
-          helpText("Required upload format:"
-          ),
-          
-          imageOutput("image", width = 100, height = 125
-          ),
-          
-          fileInput('file1', 'Choose a file to upload',
-                    accept = c(
-                      'text/csv',
-                      'text/comma-separated-values',
-                      '.csv'
-                    )
-          ),
-          
-          width = 3
+               
+        dateRangeInput("dates", label = h5(strong("Enter a Date Range")),
+                       start = "2011-01-01", end = "2012-01-01"
+        ),
+        
+        selectInput("id", label = h5(strong("How are locations identified?")), 
+                    choices = list("Zip Code" = 1, "Latitude/Longitude" = 2), 
+                    selected = 1
+        ),
+        
+        checkboxInput('header', 'Column Headers', TRUE
+        ),
+        
+        helpText("Required upload format:"
+        ),
+        
+        imageOutput("image", width = 100, height = 125
+        ),
+        
+        fileInput('file1', 'Choose a file to upload',
+                  accept = c(
+                    'text/csv',
+                    'text/comma-separated-values',
+                    '.csv'
+                  )
+        ),
+        
+        width = 3
       ),
 
       
       mainPanel(
-        column(3, uiOutput("selectyr")),
-        column(3, uiOutput("selectsite")),
-        column(3, selectInput("metric", label = "Metrics",
-                              choices =  c("gdd_cumul", "prcp_mm", "dayl_s", "srad_wm2",
+        column(3, uiOutput("selectyr")
+        ),
+        column(3, uiOutput("selectsite")
+        ),
+        column(3, selectInput("metric",
+                              label = "Metrics",
+                              choices =  c("dayl_s", "gdd_cumul", "prcp_mm", "srad_wm2",
                                            "swe_kgm2", "tmax_c", "tmin_c", "vpr_pa")
                   )
         ),
@@ -85,7 +88,8 @@ ui <- fluidPage(
         br(),
         br(),
         plotlyOutput("plot"),
-        column(4, helpText("Learn more at the", a("Daymet Homepage", href = "https://daymet.ornl.gov/overview.html",
+        column(4, helpText("Learn more at the", a("Daymet Homepage",
+                                                  href = "https://daymet.ornl.gov/overview.html",
                                                   target = "_blank"))),
         column(3, "" ),
         column(3,downloadButton("downloadData", "Download Daymet Data"))
@@ -150,6 +154,7 @@ server <- function(input, output){
        
        dat.ls[[i]] <-  get(daymetrfood[i,1])$data %>%
        mutate(site = as.character(daymetrfood[i,1]))
+       
      }
      
      dat <- data.frame()
@@ -172,16 +177,14 @@ server <- function(input, output){
     
     output$selectyr <- renderUI({
       dat <- data()
-      dat <- unique(dat$year) # get rid of these lines, replace argument below
-      selectInput(inputId = "yr",label = "Choose a year", dat)
+      selectInput(inputId = "yr",label = "Choose a year", unique(dat$year))
     })
     
     # prompt user for site
     
     output$selectsite <- renderUI({
       dat <- data()
-      dat <- unique(dat$site)
-      selectInput(inputId = "loc",label = "Choose a site", dat)
+      selectInput(inputId = "loc",label = "Choose a site", unique(dat$site))
     })
 
 
@@ -197,9 +200,9 @@ server <- function(input, output){
       yaxis <- list(title = input$metric)
       
       data() %>% filter(year == input$yr, site == input$loc) %>%
-              plot_ly(x = ~yday, y = ~get(input$metric)) %>% 
-              config(displayModeBar = FALSE) %>% 
-              layout(yaxis = yaxis, autosize = T, margin = m)
+                  plot_ly(x = ~yday, y = ~get(input$metric)) %>% 
+                  config(displayModeBar = FALSE) %>% 
+                  layout(yaxis = yaxis, autosize = T, margin = m)
               
       
     })
