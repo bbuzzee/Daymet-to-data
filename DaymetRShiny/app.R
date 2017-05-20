@@ -43,34 +43,41 @@ ui <- fluidPage(
      
       sidebarPanel(
                
-        dateRangeInput("dates", label = h5(strong("Enter a Date Range")),
-                       start = "2011-01-01", end = "2012-01-01"
-        ),
+        dateRangeInput(inputId = "dates",
+                       label = h5(strong("Enter a Date Range")),
+                       start = "2011-01-01",
+                       end = "2012-01-01"
+                       ),
         
-        selectInput("id", label = h5(strong("How are locations identified?")), 
+        selectInput(inputId = "id",
+                    label = h5(strong("How are locations identified?")), 
                     choices = list("Zip Code" = 1, "Latitude/Longitude" = 2), 
                     selected = 1
-        ),
+                    ),
         
-        checkboxInput('header', 'Column Headers', TRUE
-        ),
+        checkboxInput(inputId = 'header',
+                      label = 'Column Headers',
+                      value = TRUE
+                      ),
         
         helpText("Required upload format:"
-        ),
+                 ),
         
-        imageOutput("image", width = 100, height = 125
-        ),
+        imageOutput(outputId = "image",
+                    width = 100,
+                    height = 125
+                    ),
         
-        fileInput('file1', 'Choose a file to upload',
+        fileInput(inputId = 'file1',
+                  label = 'Choose a file to upload',
                   accept = c(
-                    'text/csv',
-                    'text/comma-separated-values',
-                    '.csv'
-                  )
-        ),
-        
+                            'text/csv',
+                            'text/comma-separated-values',
+                            '.csv'
+                            )
+                  ),
         width = 3
-      ),
+        ),
 
       
       mainPanel(
@@ -78,24 +85,38 @@ ui <- fluidPage(
         ),
         column(3, uiOutput("selectsite")
         ),
-        column(3, selectInput("metric",
+        column(3, selectInput(inputId = "metric",
                               label = "Metrics",
-                              choices =  c("dayl_s", "gdd_cumul", "prcp_mm", "srad_wm2",
-                                           "swe_kgm2", "tmax_c", "tmin_c", "vpr_pa")
-                  )
-        ),
+                              choices =  c("dayl_s",
+                                           "gdd_cumul",
+                                           "prcp_mm",
+                                           "srad_wm2",
+                                           "swe_kgm2",
+                                           "tmax_c",
+                                           "tmin_c",
+                                           "vpr_pa"
+                                           )
+                              )
+               ),
         br(),
         br(),
         br(),
         plotlyOutput("plot"),
-        column(4, helpText("Learn more at the", a("Daymet Homepage",
-                                                  href = "https://daymet.ornl.gov/overview.html",
-                                                  target = "_blank"))),
+        column(4, helpText("Learn more at the",
+                           a("Daymet Homepage",
+                            href = "https://daymet.ornl.gov/overview.html",
+                            target = "_blank"
+                            )
+                           )
+               ),
         column(3, "" ),
-        column(3,downloadButton("downloadData", "Download Daymet Data"))
+        column(3, downloadButton(outputId = "downloadData",
+                                 label = "Download Daymet Data"
+                                 )
+               )
+        )
       )
    )
-)
 
 
 
@@ -123,26 +144,32 @@ server <- function(input, output){
       return(NULL)
      }
     
-     sites <- read.csv(inFile$datapath, header = input$header, colClasses = "character")
+     sites <- read.csv(file = inFile$datapath,
+                       header = input$header,
+                       colClasses = "character"
+                       )
      
      # any time a two column file is uploaded, rename cols and join with zipcode database
      if (ncol(sites) == 2){
        
       names(sites) <- c("location", "zip")
-       
       daymetrfood <- left_join(sites, zipcode, by = "zip") %>%
                     select(get(names(sites)[1]), latitude, longitude)
-     }
-     
-     # if lat/long are uploaded, the file can be fed straight to daymetR
-     else{
+     }else{
+       # if lat/long are uploaded, the file can be fed straight to daymetR
        daymetrfood <- sites
      }
      
+     
+
+     
      # DaymetR function to download data
      
-     batch.download.daymet(df=daymetrfood, start_yr = as.numeric(format(as.Date(input$dates[1]), "%Y")),
-                           end_yr = as.numeric(format(input$dates[2], "%Y")))
+     batch.download.daymet(df = daymetrfood,
+                           start_yr = as.numeric(format(as.Date(input$dates[1]), "%Y")),
+                           end_yr = as.numeric(format(input$dates[2], "%Y")
+                                               )
+                           )
 
      
      # compile data from download into one file
@@ -153,95 +180,123 @@ server <- function(input, output){
      for (i in 1:nrow(daymetrfood)){
        
        dat.ls[[i]] <-  get(daymetrfood[i,1])$data %>%
-       mutate(site = as.character(daymetrfood[i,1]))
+       mutate(site = as.character(daymetrfood[i,1])
+              )
        
      }
      
      dat <- data.frame()
      dat <- do.call(rbind, dat.ls)
      
-     names(dat) <- c("year", "yday","dayl_s", "prcp_mm", "srad_wm2", "swe_kgm2",
-                     "tmax_c", "tmin_c", "vpr_pa", "site")
+     names(dat) <- c("year",
+                     "yday",
+                     "dayl_s",
+                     "prcp_mm",
+                     "srad_wm2",
+                     "swe_kgm2",
+                     "tmax_c",
+                     "tmin_c",
+                     "vpr_pa",
+                     "site"
+                     )
      
      # create cumulative growing degree day calculations for each site and for each
      # year
      
      dat <-  dat %>% group_by(year, site) %>% 
-             mutate(gdd_day = ifelse((tmax_c+tmin_c)/2 > 10,(tmax_c + tmin_c)/2 - 10, 0)) %>% 
+             mutate(gdd_day = ifelse((tmax_c+tmin_c)/2 > 10, (tmax_c + tmin_c)/2 - 10, 0)) %>% 
              mutate(gdd_cumul = cumsum(gdd_day))
      
      return(dat)
-    })
+   })
     
     # prompt user for year to graph
     
-    output$selectyr <- renderUI({
-      dat <- data()
-      selectInput(inputId = "yr",label = "Choose a year", unique(dat$year))
-    })
+  output$selectyr <- renderUI({
+    dat <- data()
+    selectInput(inputId = "yr",label = "Choose a year", unique(dat$year))
+  })
     
     # prompt user for site
     
-    output$selectsite <- renderUI({
-      dat <- data()
-      selectInput(inputId = "loc",label = "Choose a site", unique(dat$site))
-    })
+  output$selectsite <- renderUI({
+    dat <- data()
+    selectInput(inputId = "loc",label = "Choose a site", unique(dat$site))
+  })
 
 
     # --------------- Create Plot ---------------
     
-    output$plot <- renderPlotly({
+  output$plot <- renderPlotly({
       
-      if(is.null(data())){
-        return(NULL)
-      }       
+    if(is.null(data())){
+      return(NULL)
+    }       
 
-      m <- list(l = 70,r = 70, b = 100, t = 25,pad = 1)
-      yaxis <- list(title = input$metric)
-      
-      data() %>% filter(year == input$yr, site == input$loc) %>%
-                  plot_ly(x = ~yday, y = ~get(input$metric)) %>% 
-                  config(displayModeBar = FALSE) %>% 
-                  layout(yaxis = yaxis, autosize = T, margin = m)
+    m <- list(l = 70,
+              r = 70,
+              b = 100,
+              t = 25,
+              pad = 1
+              )
+    
+    yaxis <- list(title = input$metric)
+    
+    data() %>% filter(year == input$yr, site == input$loc) %>%
+                plot_ly(x = ~yday, y = ~get(input$metric)) %>% 
+                config(displayModeBar = FALSE) %>% 
+                layout(yaxis = yaxis, autosize = T, margin = m)
               
       
-    })
+  })
     
     
-    output$downloadData <- downloadHandler(
+  output$downloadData <- downloadHandler(
       
-      filename = function() { 
-        paste0(Sys.Date(),"-daymet-data", ".csv", sep="")
+    filename = function() { 
+      paste0(Sys.Date(),"-daymet-data", ".csv", sep="")
       },
-      
-      content = function(file) {
-        write.csv(data(), file, row.names = F)
-      })
+    
+    content = function(file) {
+      write.csv(data(), file, row.names = F)
+      }
+    )
 
     
     # render appropriate format image based on input, four possibilities
     
-    output$image <- renderImage({
-      if(input$header & input$id == 1)
-        return(list(src = "www/header_zip.PNG", # changed this!
-                    filetype = "image/png",
-                    alt = "string"))
-      else if (!input$header & input$id == 1)
-        return(list(src = "www/noheader_zip.PNG",
-                    filetype = "image/png",
-                    alt = "string"))
-      else if (input$header & input$id == 2)
-        return(list(src = "www/header_lat.PNG",
-                    filetype = "image/png",
-                    alt = "string",
-                    width = 200))
-      else (!input$header & input$id == 2)
-        return(list(src = "www/noheader_lat.PNG",
-                    filetype = "image/png",
-                    alt = "string",
-                    width = 200))
+  output$image <- renderImage({
+    
+    if (input$header & input$id == 1){
+      return(list(src = "www/header_zip.PNG", # changed this!
+                  filetype = "image/png",
+                  alt = "string"
+                  )
+             )
+    } else if (!input$header & input$id == 1){
+      return(list(src = "www/noheader_zip.PNG",
+                  filetype = "image/png",
+                  alt = "string"
+                  )
+             )
+    } else if (input$header & input$id == 2){
+      return(list(src = "www/header_lat.PNG",
+                  filetype = "image/png",
+                  alt = "string",
+                  width = 200
+                  )
+             )
+    } else {
+      return(list(src = "www/noheader_lat.PNG",
+                  filetype = "image/png",
+                  alt = "string",
+                  width = 200
+                  )
+             )
+      }
+      
     },
-    deleteFile = F)
+  deleteFile = F)
 }
     
    
