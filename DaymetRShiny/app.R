@@ -90,7 +90,9 @@ ui <- fluidPage(
                               choices =  c("dayl_s",
                                            "gdd_cumul",
                                            "prcp_mm",
+                                           "prcp_cumul",
                                            "srad_wm2",
+                                           "srad_cumul",
                                            "swe_kgm2",
                                            "tmax_c",
                                            "tmin_c",
@@ -205,7 +207,9 @@ server <- function(input, output){
      
      dat <-  dat %>% group_by(year, site) %>% 
              mutate(gdd_day = ifelse((tmax_c+tmin_c)/2 > 10, (tmax_c + tmin_c)/2 - 10, 0)) %>% 
-             mutate(gdd_cumul = cumsum(gdd_day))
+             mutate(gdd_cumul = cumsum(gdd_day),
+                    srad_cumul = cumsum(srad_wm2),
+                    prcp_cumul = cumsum(prcp_mm))
      
      return(dat)
    })
