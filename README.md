@@ -21,6 +21,6 @@ Users will need to upload a file containing a column for location id (text or nu
 
 Embedded is an interactive plot for basic exploration and a csv file of the following format is available to download.
 
-![alt text](./DaymetRShiny/www/output.PNG)
+![alt text](./DaymetRShiny/www/output1.PNG)
   
 
