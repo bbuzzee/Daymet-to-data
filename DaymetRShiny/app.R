@@ -37,7 +37,8 @@ ui <- fluidPage(
   
    theme =  shinytheme("spacelab"),
 
-   titlePanel(img(src = "daymet_web_banner_NA.jpg")),
+   titlePanel(img(src = "daymet_web_banner_NA.jpg"),
+              windowTitle = "Daymet R Shiny"),
    
    sidebarLayout(
      
@@ -210,6 +211,9 @@ server <- function(input, output){
              mutate(gdd_cumul = cumsum(gdd_day),
                     srad_cumul = cumsum(srad_wm2),
                     prcp_cumul = cumsum(prcp_mm))
+     
+     # move site column to column 1 for easy key-value identification
+     dat <- dat %>% select(site, everything())
      
      return(dat)
    })
