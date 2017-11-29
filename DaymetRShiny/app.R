@@ -8,8 +8,7 @@ library(plotly)
 data(zipcode)
 
 
-# changed the download function to take a dataframe instead of a csv.
-# change is on github, need to figure out how to load modified package with library
+# change download function from daymetr to take dataframe as argument instead of a csv file
 
 batch.download.daymet <- function(df,
                                   start_yr=1980,
