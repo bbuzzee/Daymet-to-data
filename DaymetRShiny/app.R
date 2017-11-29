@@ -143,14 +143,16 @@ server <- function(input, output){
       
      inFile <- input$file1
       
+     # inFile <- NULL
      if (is.null(inFile)){
-      return(NULL)
-     }
-    
-     sites <- read.csv(file = inFile$datapath,
+      sites <- data.frame(location = c('Yellowstone', 'Death Valley'), zip = c('59730', '92328'))
+     }else{
+      sites <- read.csv(file = inFile$datapath,
                        header = input$header,
                        colClasses = "character"
                        )
+     }
+     
      
      # any time a two column file is uploaded, rename cols and join with zipcode database
      if (ncol(sites) == 2){
@@ -177,12 +179,12 @@ server <- function(input, output){
      
      # compile data from download into one file
      # possibly simplify?
-     
+     nrow(daymetrfood)
      dat.ls <- NULL
      
      for (i in 1:nrow(daymetrfood)){
        
-       dat.ls[[i]] <-  get(daymetrfood[i,1])$data %>%
+       dat.ls[[i]] <-  get(as.character(daymetrfood[i,1]))$data %>%
        mutate(site = as.character(daymetrfood[i,1])
               )
        
@@ -222,14 +224,18 @@ server <- function(input, output){
     
   output$selectyr <- renderUI({
     dat <- data()
-    selectInput(inputId = "yr",label = "Choose a year", unique(dat$year))
+    selectInput(inputId = "yr",
+                label = "Choose a year",
+                choices = unique(dat$year))
   })
     
     # prompt user for site
     
   output$selectsite <- renderUI({
     dat <- data()
-    selectInput(inputId = "loc",label = "Choose a site", unique(dat$site))
+    selectInput(inputId = "loc",
+                label = "Choose a site",
+                choices = unique(dat$site))
   })
 
 
@@ -237,9 +243,9 @@ server <- function(input, output){
     
   output$plot <- renderPlotly({
       
-    if(is.null(data())){
-      return(NULL)
-    }       
+    # if(is.null(data())){
+    #   return(NULL)
+    # }       
 
     m <- list(l = 70,
               r = 70,
@@ -250,7 +256,7 @@ server <- function(input, output){
     
     yaxis <- list(title = input$metric)
     
-    data() %>% filter(year == input$yr, site == input$loc) %>%
+    data() %>% filter(year %in% input$yr, site %in% input$loc) %>%
                 plot_ly(x = ~yday, y = ~get(input$metric)) %>% 
                 config(displayModeBar = FALSE) %>% 
                 layout(yaxis = yaxis, autosize = T, margin = m)
