@@ -23,6 +23,8 @@ Embedded is an interactive plot for basic exploration and a csv file of the foll
 
 ![alt text](./DaymetRShiny/www/output1.PNG)
   
+The output variables consist of all the output from daymet plus growing degree days (max temp - min temp
+)/2 - 10 degrees (celsius), and variables for tracking yearly accumulations.
 
 ## Citations
 
