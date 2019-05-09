@@ -26,4 +26,4 @@ Embedded is an interactive plot for basic exploration and a csv file of the foll
 
 ## Citations
 
-Hufkens et al. (2018). An integrated phenology modelling framework in R: modelling vegetation phenology with phenor Methods in Ecology & Evolution, 9(2), 1-10.
+This project builds upon the daymetr package created by Koen Hufkens: https://github.com/khufkens/daymetr
